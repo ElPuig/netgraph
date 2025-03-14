@@ -20,11 +20,11 @@ This file is part of Netgraph.
 package main
 
 import (
+	"html/template"
 	"net/http"
-	"text/template"
 )
 
-var netview_path string = "../../internal/netview/"
+var netview_path string = "internal/netview/"
 
 func indexHandler(rw http.ResponseWriter, r *http.Request) {
 	index_template, err := template.ParseFiles(netview_path + "index.html")
@@ -36,6 +36,8 @@ func indexHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	css_fs := http.FileServer(http.Dir(netview_path + "css"))
+	http.Handle("/css/", http.StripPrefix("/css/", css_fs))
 	http.HandleFunc("/", indexHandler)
 	http.ListenAndServe("localhost:3000", nil)
 }
