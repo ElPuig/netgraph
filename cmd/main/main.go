@@ -20,14 +20,58 @@ This file is part of Netgraph.
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
+	"regexp"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/alexflint/go-arg"
 )
 
 var args struct {
 	Source string `arg:"positional,required"`
+}
+
+func getFileLinks(url string, regex string) ([]string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("Could not access '%s': %v", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Could not access '%s': %d", url, resp.StatusCode)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := regexp.Compile(regex)
+	if err != nil {
+		return nil, err
+	}
+
+	var res []string
+	doc.Find("a").Each(func(i int, s *goquery.Selection) {
+		if href, exists := s.Attr("href"); exists {
+			if r.MatchString(href) {
+				res = append(res, url+href)
+			}
+		}
+	})
+	return res, nil
+}
+
+func downloadXmlFiles(url string, regex string) (string, error) {
+	links, err := getFileLinks(url, regex)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(links)
+	return "", nil // TODO: Return an actual value. Remove print above.
 }
 
 var netview_path string = "internal/netview/"
@@ -42,6 +86,13 @@ func indexHandler(rw http.ResponseWriter, r *http.Request) {
 
 func main() {
 	arg.MustParse(&args)
+	// TODO: check Source arg and add '/' at the end to avoid errors later on.
+
+	xml_files, err := downloadXmlFiles(args.Source, `\d+\.\d+\.\d+\.\d+`) // TODO: regex hardcoded. Turn into argument in the future?
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(xml_files)
 
 	css_fs := http.FileServer(http.Dir(netview_path + "css"))
 	http.Handle("/css/", http.StripPrefix("/css/", css_fs))
