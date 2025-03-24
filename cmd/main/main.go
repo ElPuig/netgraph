@@ -20,126 +20,16 @@ This file is part of Netgraph.
 package main
 
 import (
-	"bytes"
-	"encoding/xml"
 	"fmt"
 	"html/template"
-	"io"
 	"net/http"
-	"regexp"
 
-	"github.com/PuerkitoBio/goquery"
+	"github.com/ElPuig/netgraph/pkg/xml_loader"
 	"github.com/alexflint/go-arg"
 )
 
 var args struct {
 	Source string `arg:"positional,required"`
-}
-
-type RequestXMLData struct {
-	XMLName xml.Name `xml:"REQUEST"`
-	Device  struct {
-		Info struct {
-			Name     string   `xml:"NAME"`
-			Model    string   `xml:"MODEL"`
-			Location string   `xml:"LOCATION"`
-			Ips      []string `xml:"IPS>IP"`
-		} `xml:"INFO"`
-		Ports []struct {
-			Mac         string `xml:"MAC"`
-			IfName      string `xml:"IFNAME"`
-			Connections struct {
-				Cdp        string `xml:"CDP"`
-				Connection []struct {
-					SysName string   `xml:"SYSNAME"`
-					Macs    []string `xml:"MAC"`
-				} `xml:"CONNECTION"`
-			} `xml:"CONNECTIONS"`
-			Vlans []struct {
-				Number string `xml:"NUMBER"`
-				Name   string `xml:"NAME"`
-				Tagged string `xml:"TAGGED"`
-			} `xml:"VLANS>VLAN"`
-		} `xml:"PORTS>PORT"`
-	} `xml:"CONTENT>DEVICE"`
-}
-
-func getUrlBody(url string) (io.ReadCloser, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("Could not access '%s': %v", url, err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Could not access '%s': %d", url, resp.StatusCode)
-	}
-
-	return resp.Body, nil
-}
-
-func getFileLinks(url string, regex string) ([]string, error) {
-	body, err := getUrlBody(url)
-	if err != nil {
-		return nil, err
-	}
-	defer body.Close()
-
-	doc, err := goquery.NewDocumentFromReader(body)
-	if err != nil {
-		return nil, err
-	}
-
-	r, err := regexp.Compile(regex)
-	if err != nil {
-		return nil, err
-	}
-
-	var res []string
-	doc.Find("a").Each(func(i int, s *goquery.Selection) {
-		if href, exists := s.Attr("href"); exists {
-			if r.MatchString(href) {
-				res = append(res, url+href)
-			}
-		}
-	})
-	return res, nil
-}
-
-func getXmlFromUrl(url string) (RequestXMLData, error) {
-	body, err := getUrlBody(url)
-	if err != nil {
-		return RequestXMLData{}, err
-	}
-	defer body.Close()
-
-	content, err := io.ReadAll(body)
-	if err != nil {
-		return RequestXMLData{}, fmt.Errorf("Error reading XML file: %v", err)
-	}
-
-	var xml_data RequestXMLData
-	err = xml.NewDecoder(bytes.NewReader(content)).Decode(&xml_data)
-	if err != nil {
-		return RequestXMLData{}, fmt.Errorf("Error reading XML file: %v", err)
-	}
-	return xml_data, nil
-}
-
-func downloadXmlFiles(url string, regex string) ([]RequestXMLData, error) {
-	links, err := getFileLinks(url, regex)
-	if err != nil {
-		return nil, err
-	}
-
-	res := []RequestXMLData{}
-	for _, lnk := range links {
-		xml_data, err := getXmlFromUrl(lnk)
-		if err != nil {
-			return nil, err
-		}
-		res = append(res, xml_data)
-	}
-	return res, nil // TODO: Return an actual value. Remove print above.
 }
 
 var netview_path string = "internal/netview/"
@@ -156,7 +46,7 @@ func main() {
 	arg.MustParse(&args)
 	// TODO: check Source arg and add '/' at the end to avoid errors later on.
 
-	xml_files, err := downloadXmlFiles(args.Source, `\d+\.\d+\.\d+\.\d+`) // TODO: regex hardcoded. Turn into argument in the future?
+	xml_files, err := xml_loader.DownloadXmlFiles(args.Source, `\d+\.\d+\.\d+\.\d+`) // TODO: regex hardcoded. Turn into argument in the future?
 	if err != nil {
 		panic(err)
 	}
