@@ -40,11 +40,13 @@ type RequestXMLData struct {
 	XMLName xml.Name `xml:"REQUEST"`
 	Device  struct {
 		Info struct {
-			Name     string `xml:"NAME"`
-			Model    string `xml:"MODEL"`
-			Location string `xml:"LOCATION"`
+			Name     string   `xml:"NAME"`
+			Model    string   `xml:"MODEL"`
+			Location string   `xml:"LOCATION"`
+			Ips      []string `xml:"IPS>IP"`
 		} `xml:"INFO"`
 		Ports []struct {
+			Mac         string `xml:"MAC"`
 			IfName      string `xml:"IFNAME"`
 			Connections struct {
 				Cdp        string `xml:"CDP"`
