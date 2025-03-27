@@ -20,16 +20,18 @@ This file is part of Netgraph.
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
+	"time"
 
 	"github.com/ElPuig/netgraph/pkg/graph_vis"
 	"github.com/ElPuig/netgraph/pkg/xml_loader"
 	"github.com/alexflint/go-arg"
 )
 
-var node_list map[string]graph_vis.Noder
+var node_map graph_vis.NodeMap
 
 var args struct {
 	Source string `arg:"positional,required"`
@@ -37,12 +39,20 @@ var args struct {
 
 var netview_path string = "internal/netview/"
 
+type PageData struct {
+	Date  string
+	Nodes json.RawMessage
+	Edges string
+}
+
+var pageData PageData
+
 func indexHandler(rw http.ResponseWriter, r *http.Request) {
 	index_template, err := template.ParseFiles(netview_path + "index.html")
 	if err != nil {
 		panic(err)
 	}
-	index_template.Execute(rw, nil)
+	index_template.Execute(rw, pageData)
 }
 
 func main() {
@@ -54,16 +64,15 @@ func main() {
 		panic(err)
 	}
 
-	node_list = graph_vis.GetNodeList(xml_files)
+	node_map = graph_vis.GetNodeMap(xml_files)
 
-	// Iterem i mostrem els nodes
-	fmt.Println("Imprimint nodes...")
-	for key, node := range node_list {
-		fmt.Printf("ID: %s,\nLabel:\n%s,\nShape: %s,\nSize: %d\n", key, node.(graph_vis.Node).GetLabel(), node.GetShape(), node.GetSize())
-	}
+	pageData.Date = time.Now().String()
+	pageData.Nodes = node_map.ToVisJson()
+	pageData.Edges = ""
 
 	css_fs := http.FileServer(http.Dir(netview_path + "css"))
 	http.Handle("/css/", http.StripPrefix("/css/", css_fs))
 	http.HandleFunc("/", indexHandler)
-	http.ListenAndServe("localhost:3000", nil)
+	fmt.Println("Listening on localhost:8080")
+	http.ListenAndServe("localhost:8080", nil)
 }

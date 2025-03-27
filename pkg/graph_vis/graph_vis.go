@@ -19,7 +19,12 @@ This file is part of Netgraph.
 
 package graph_vis
 
-import "github.com/ElPuig/netgraph/pkg/xml_loader"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/ElPuig/netgraph/pkg/xml_loader"
+)
 
 type Node struct {
 	Id       string
@@ -33,11 +38,13 @@ type Noder interface {
 	GetGroup() string
 	GetNodeType() string
 	GetShape() string
-	GetSize() int
+	GetSize() string
+	GetUrl() string
 }
+type NodeMap map[string]Noder
 
 func (n Node) GetLabel() string {
-	return n.Id + "\n" + n.Ip + "\nModel: " + n.Model + "\nLocation: " + n.Location
+	return n.Id + "\\n" + n.Ip + "\\nModel: " + n.Model + "\\nLocation: " + n.Location
 }
 
 func (n Node) GetGroup() string {
@@ -59,12 +66,16 @@ func (n Node) GetShape() string {
 	}
 }
 
-func (n Node) GetSize() int {
-	return 10
+func (n Node) GetSize() string {
+	return "10"
 }
 
-func GetNodeList(xml_data []xml_loader.RequestXMLData) map[string]Noder {
-	res := make(map[string]Noder)
+func (n Node) GetUrl() string {
+	return "TODO"
+}
+
+func GetNodeMap(xml_data []xml_loader.RequestXMLData) map[string]Noder {
+	res := make(NodeMap)
 	for _, xml := range xml_data {
 		res[xml.IP] = Node{
 			Id:       xml.Device.Info.Name,
@@ -74,4 +85,21 @@ func GetNodeList(xml_data []xml_loader.RequestXMLData) map[string]Noder {
 		}
 	}
 	return res
+}
+
+func (nm NodeMap) ToVisJson() json.RawMessage {
+	res := ``
+	res += `[`
+	for k, n := range nm {
+		res += `{ "id": "` + k + `", `
+		res += `  "label": "` + n.GetLabel() + `", `
+		res += `  "shape": "` + n.GetShape() + `", `
+		res += `  "group": "` + n.GetGroup() + `", `
+		res += `  "size": ` + string(n.GetSize()) + `, `
+		res += `  "url": "` + n.GetUrl() + `"},`
+	}
+	res = res[:len(res)-1]
+	res += `]`
+	fmt.Println(res)
+	return json.RawMessage(res)
 }
