@@ -3,7 +3,8 @@ module github.com/ElPuig/netgraph
 go 1.24.1
 
 require (
-	github.com/ElPuig/netgraph/pkg/xml_loader v0.0.0-00010101000000-000000000000
+	github.com/ElPuig/netgraph/pkg/graph_vis v0.0.0-00010101000000-000000000000
+	github.com/ElPuig/netgraph/pkg/xml_loader v0.0.0-20250324175515-82bb6e6fd013
 	github.com/alexflint/go-arg v1.5.1
 )
 
@@ -15,3 +16,5 @@ require (
 )
 
 replace github.com/ElPuig/netgraph/pkg/xml_loader => ./pkg/xml_loader
+
+replace github.com/ElPuig/netgraph/pkg/graph_vis => ./pkg/graph_vis

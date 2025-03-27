@@ -26,12 +26,14 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
 type RequestXMLData struct {
 	XMLName xml.Name `xml:"REQUEST"`
+	IP      string
 	Device  struct {
 		Info struct {
 			Name     string   `xml:"NAME"`
@@ -116,6 +118,8 @@ func getXmlFromUrl(url string) (RequestXMLData, error) {
 	if err != nil {
 		return RequestXMLData{}, fmt.Errorf("Error reading XML file: %v", err)
 	}
+	split_url := strings.Split(url, "/")
+	xml_data.IP = split_url[len(split_url)-1]
 	return xml_data, nil
 }
 
@@ -129,9 +133,10 @@ func DownloadXmlFiles(url string, regex string) ([]RequestXMLData, error) {
 	for _, lnk := range links {
 		xml_data, err := getXmlFromUrl(lnk)
 		if err != nil {
-			return nil, err
+			fmt.Println(err)
+		} else {
+			res = append(res, xml_data)
 		}
-		res = append(res, xml_data)
 	}
 	return res, nil // TODO: Return an actual value. Remove print above.
 }
