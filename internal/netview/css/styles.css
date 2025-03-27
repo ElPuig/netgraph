@@ -28,3 +28,13 @@ html {
     font-size: 12pt;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
+
+body {
+    width: 100%;
+    height: 100%;
+}
+
+#network {
+    width: 100%;
+    height: 100%;
+}
