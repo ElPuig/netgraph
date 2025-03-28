@@ -32,6 +32,7 @@ import (
 )
 
 var node_map graph_vis.NodeMap
+var edge_map graph_vis.EdgeMap
 
 var args struct {
 	Source string `arg:"positional,required"`
@@ -42,7 +43,7 @@ var netview_path string = "internal/netview/"
 type PageData struct {
 	Date  string
 	Nodes json.RawMessage
-	Edges string
+	Edges json.RawMessage
 }
 
 var pageData PageData
@@ -65,10 +66,11 @@ func main() {
 	}
 
 	node_map = graph_vis.GetNodeMap(xml_files)
+	edge_map = graph_vis.GetEdgeMap(xml_files)
 
 	pageData.Date = time.Now().String()
 	pageData.Nodes = node_map.ToVisJson()
-	pageData.Edges = ""
+	pageData.Edges = edge_map.ToVisJson()
 
 	css_fs := http.FileServer(http.Dir(netview_path + "css"))
 	http.Handle("/css/", http.StripPrefix("/css/", css_fs))

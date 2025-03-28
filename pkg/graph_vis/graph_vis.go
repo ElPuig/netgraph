@@ -22,9 +22,14 @@ package graph_vis
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/ElPuig/netgraph/pkg/xml_loader"
 )
+
+var regex_switch string = `^R.*-.*`
+var regex_ap string = `^\d{3}`
 
 type Node struct {
 	Id       string
@@ -34,6 +39,7 @@ type Node struct {
 }
 
 type Noder interface {
+	GetName() string
 	GetLabel() string
 	GetGroup() string
 	GetNodeType() string
@@ -41,18 +47,39 @@ type Noder interface {
 	GetSize() string
 	GetUrl() string
 }
+
 type NodeMap map[string]Noder
+
+func (n Node) GetName() string {
+	return n.Id
+}
 
 func (n Node) GetLabel() string {
 	return n.Id + "\\n" + n.Ip + "\\nModel: " + n.Model + "\\nLocation: " + n.Location
 }
 
 func (n Node) GetGroup() string {
-	return "TODO"
+	match, _ := regexp.MatchString(regex_switch, n.Id)
+	if match {
+		return strings.Split(n.Id, "-")[0][1:]
+	}
+	match, _ = regexp.MatchString(regex_ap, n.Id)
+	if match {
+		return "AP"
+	}
+	return "UNKNOWN"
 }
 
 func (n Node) GetNodeType() string {
-	return "TODO"
+	match, _ := regexp.MatchString(regex_switch, n.Id)
+	if match {
+		return "SWITCH"
+	}
+	match, _ = regexp.MatchString(regex_ap, n.Id)
+	if match {
+		return "AP"
+	}
+	return "UNDEFINED"
 }
 
 func (n Node) GetShape() string {
@@ -71,10 +98,10 @@ func (n Node) GetSize() string {
 }
 
 func (n Node) GetUrl() string {
-	return "TODO"
+	return "/" + n.Ip
 }
 
-func GetNodeMap(xml_data []xml_loader.RequestXMLData) map[string]Noder {
+func GetNodeMap(xml_data []xml_loader.RequestXMLData) NodeMap {
 	res := make(NodeMap)
 	for _, xml := range xml_data {
 		res[xml.IP] = Node{
@@ -90,8 +117,8 @@ func GetNodeMap(xml_data []xml_loader.RequestXMLData) map[string]Noder {
 func (nm NodeMap) ToVisJson() json.RawMessage {
 	res := ``
 	res += `[`
-	for k, n := range nm {
-		res += `{ "id": "` + k + `", `
+	for _, n := range nm {
+		res += `{ "id": "` + n.GetName() + `", `
 		res += `  "label": "` + n.GetLabel() + `", `
 		res += `  "shape": "` + n.GetShape() + `", `
 		res += `  "group": "` + n.GetGroup() + `", `
@@ -100,6 +127,82 @@ func (nm NodeMap) ToVisJson() json.RawMessage {
 	}
 	res = res[:len(res)-1]
 	res += `]`
-	fmt.Println(res)
+	return json.RawMessage(res)
+}
+
+type Edge struct {
+	From string
+	To   string
+}
+
+type Edger interface {
+	GetFrom() string
+	GetTo() string
+	GetLabel() string
+	GetLength() string
+	GetArrowType() string
+}
+
+type EdgeMap map[string]Edger
+
+func (e Edge) GetFrom() string {
+	return e.From
+}
+
+func (e Edge) GetTo() string {
+	return e.To
+}
+
+func (e Edge) GetLabel() string {
+	return "TODO"
+}
+
+func (e Edge) GetLength() string {
+	return "TODO"
+}
+
+func (e Edge) GetArrowType() string {
+	return "TODO"
+}
+
+func GetEdgeMap(xml_data []xml_loader.RequestXMLData) EdgeMap {
+	res := make(EdgeMap)
+	for _, xml := range xml_data {
+		for _, p := range xml.Device.Ports {
+			for _, c := range p.Connections.Connection {
+				if c.SysName != "" {
+					var name0, name1 string
+					if xml.Device.Info.Name < c.SysName {
+						name0 = xml.Device.Info.Name
+						name1 = c.SysName
+					} else {
+						name0 = c.SysName
+						name1 = xml.Device.Info.Name
+					}
+					edge_key := name0 + name1
+					if value, exists := res[edge_key]; exists {
+						fmt.Println(value)
+					} else {
+						res[edge_key] = Edge{
+							From: name0,
+							To:   name1,
+						}
+					}
+				}
+			}
+		}
+	}
+	return res
+}
+
+func (em EdgeMap) ToVisJson() json.RawMessage {
+	res := ``
+	res += `[`
+	for _, e := range em {
+		res += `{ "from": "` + e.GetFrom() + `", `
+		res += `  "to": "` + e.GetTo() + `"},`
+	}
+	res = res[:len(res)-1]
+	res += `]`
 	return json.RawMessage(res)
 }
